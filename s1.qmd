@@ -1,0 +1,78 @@
+# OpenStreetMap Data
+```{r}
+library(osmextract)
+library(sf)
+# Download cycleways in West Yorkshire
+west_yorkshire_cycleways = oe_get(
+  # force_download = TRUE,
+  place = "West Yorkshire",
+  extra_tags = c("maxspeed", "lit", "cycleway"),
+  query = "SELECT * FROM lines WHERE highway IN ('cycleway', 'path')"
+)
+plot(st_geometry(west_yorkshire_cycleways))
+```
+
+```{r}
+# Download amenities in West Yorkshire
+west_yorkshire_amenities = oe_get(
+  layer = "points", # We want the point location
+  place = "West Yorkshire",
+  extra_tags = c("amenity") 
+)
+plot(st_geometry(west_yorkshire_amenities))
+
+west_yorkshire_amenities$amenity |> table()
+```
+
+# Road Traffic Casualty Data (STATS19)
+
+```{r}
+library(stats19)
+# Download 2020 collision data
+collisions = get_stats19(year = 2020, type = "collision")
+# Download casualty data
+casualties = get_stats19(year = 2020, type = "cas")
+# Download vehicle data
+vehicles = get_stats19(year = 2020, type = "veh")
+```
+
+# Origin-Destination Data
+
+```{r}
+library(pct)
+# Download desire lines for Leeds
+leeds_desire_lines = get_pct_lines(region = "west-yorkshire")
+```
+
+# Boundary and Census Data
+
+```{r}
+library(sf)
+# Download LSOA boundaries
+url = "data/lsoa_boundaries.gpkg"
+lsoa_boundaries = st_read(url)
+```
+
+# Cleaning Data
+
+```{r}
+# Clean collision data
+collisions_clean = collisions |>
+  # Remove rows with missing coordinates
+  drop_na(location_easting_osgr,location_northing_osgr) |>
+  # Convert to sf object (spatial)
+  st_as_sf(coords = c("location_easting_osgr", "location_northing_osgr"), crs = 27700) |>
+  # Select relevant columns
+  select(accident_index, date, speed_limit, accident_severity)
+```
+
+# Handling Missing Data
+
+```{r}
+# Check for missing values
+summary(collisions_clean)
+# Impute or remove missing values
+collisions_clean = collisions_clean |>
+  mutate(speed_limit = ifelse(is.na(speed_limit), median(speed_limit, na.rm = TRUE), speed_limit))
+```
+
