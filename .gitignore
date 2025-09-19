@@ -1,2 +1,6 @@
 .openstreetmap.qmd
 data/
+
+.env
+
+.gitignore
